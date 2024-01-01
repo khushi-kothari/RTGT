@@ -2,11 +2,24 @@ import React, { useEffect, useState } from 'react'
 import List from './List'
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import db from './firebase.js' //can import default export with any name
+import { onSnapshot, collection } from "firebase/firestore";
 
 
 function Fetch() {
     const [results, setResults] = useState([])
     const [callFetch, setCallFetch] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'results'), (snapshot) => {
+            console.log('snapshot : ', snapshot);
+            // setColors(snapshot.docs.map((doc) => doc.data()));
+        });
+
+        // Cleanup function to unsubscribe when component unmounts
+        return () => unsubscribe();
+    }, [db]);
+
 
     useEffect(() => {
         if (callFetch) {
