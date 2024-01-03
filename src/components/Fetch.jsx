@@ -3,7 +3,7 @@ import List from './List'
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import db from './firebase.js' //can import default export with any name
-import { onSnapshot, collection } from "firebase/firestore";
+import { onSnapshot, collection, setDoc, doc, writeBatch } from "firebase/firestore";
 
 
 function Fetch() {
@@ -33,8 +33,31 @@ function Fetch() {
                             'Authorization': `${accessToken}`,
                         },
                     });
-                    setResults(response.data.items);
-                    console.log("data items: ", response.data.items);
+                    const data = response.data.items;
+                    setResults(data);
+                    console.log("data items: ", data, "type : ", Array.isArray(data));
+
+                    const batch = writeBatch(db);
+                    data.map((result) => {
+                        console.log("single item ", result);
+                        const docRef = doc(db, "001", result.id);
+                        const payload = {
+                            description: result.description,
+                            forks_count: result.forks_count,
+                            full_name: result.full_name,
+                            id: result.id,
+                            owner: {
+                                avatar_url: result.owner.avatar_url,
+                            },
+                            stargazers_count: result.stargazers_count,
+                            updated_at: result.updated_at,
+                            watchers_count: result.watchers_count
+                        }
+                        console.log('payload : ', payload);
+                        batch.set(docRef, payload);
+                    });
+                    await batch.commit();
+
                 } catch (error) {
                     console.error('Error:', error);
                     setResults([]);
