@@ -3,22 +3,63 @@ import List from './List'
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import db from './firebase.js' //can import default export with any name
-import { onSnapshot, collection } from "firebase/firestore";
+import { getDocs, collection, setDoc, doc, writeBatch } from "firebase/firestore";
 
 
 function Fetch() {
     const [results, setResults] = useState([])
-    const [callFetch, setCallFetch] = useState(true);
+    const [callFetch, setCallFetch] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'results'), (snapshot) => {
-            console.log('snapshot : ', snapshot);
-            // setColors(snapshot.docs.map((doc) => doc.data()));
-        });
+        console.log('inside 1st useEffect')
+        const getRepoList = async () => {
+            try {
+                const data = await getDocs(collection(db, '001'));
+                console.log('Data from firestore : ', data);
+                const filteredData = data.docs.map((doc) => ({
+                    ...doc.data(),
+                    id: doc.id,
+                }));
+                setResults(filteredData);
+                console.log('filteredData : ', filteredData);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        getRepoList();
+    }, []);
 
-        // Cleanup function to unsubscribe when component unmounts
-        return () => unsubscribe();
-    }, [db]);
+    useEffect(() => {
+        console.log('results ', results);
+        const batch = writeBatch(db);
+        const addRepos = async () => {
+            try {
+                results.map((result) => {
+                    // console.log("single item ", result);
+                    const docRef = doc(db, "001", (result.id).toString());
+                    const payload = {
+                        description: result.description,
+                        forks_count: result.forks_count,
+                        full_name: result.full_name,
+                        id: result.id,
+                        owner: {
+                            avatar_url: result.owner.avatar_url,
+                        },
+                        stargazers_count: result.stargazers_count,
+                        updated_at: result.updated_at,
+                        watchers_count: result.watchers_count
+                    }
+                    // console.log('payload : ', payload);
+                    batch.set(docRef, payload);
+                });
+                await batch.commit();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+        addRepos();
+
+    }, [results])
 
 
     useEffect(() => {
@@ -33,8 +74,9 @@ function Fetch() {
                             'Authorization': `${accessToken}`,
                         },
                     });
-                    setResults(response.data.items);
-                    console.log("data items: ", response.data.items);
+                    const data = response.data.items;
+                    setResults(data);
+                    console.log("data items: ", data, "type : ", Array.isArray(data));
                 } catch (error) {
                     console.error('Error:', error);
                     setResults([]);
@@ -68,3 +110,23 @@ function Fetch() {
 }
 
 export default Fetch
+
+// results.map((result) => {
+//     console.log("single item ", result);
+//     const docRef = doc(db, "001", result.id);
+//     const payload = {
+//         description: result.description,
+//         forks_count: result.forks_count,
+//         full_name: result.full_name,
+//         id: result.id,
+//         owner: {
+//             avatar_url: result.owner.avatar_url,
+//         },
+//         stargazers_count: result.stargazers_count,
+//         updated_at: result.updated_at,
+//         watchers_count: result.watchers_count
+//     }
+//     console.log('payload : ', payload);
+//     batch.set(docRef, payload);
+// });
+// await batch.commit();
