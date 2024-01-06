@@ -68,7 +68,7 @@ function Fetch() {
             const search = async () => {
                 try {
                     const accessToken = import.meta.env.ACCESS_TOKEN;
-                    let apiUrl = `https://api.github.com/search/repositories?q=js&language=javascript`;
+                    let apiUrl = `https://api.github.com/search/repositories?q=js&language=javascript&sort=updated&order=desc`;
                     const response = await axios.get(apiUrl, {
                         headers: {
                             'Authorization': `${accessToken}`,
