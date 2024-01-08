@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import Fetch from './Fetch'
+import Fetch from '../pages/Fetch'
 
 function Refresh() {
     const [callFetch, setCallFetch] = useState(false);
