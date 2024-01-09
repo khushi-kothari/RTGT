@@ -14,12 +14,16 @@ function Issues() {
     const [url, setUrl] = useState('https://api.github.com/search/issues?q=label:goodfirstissue&sort:updatedat')
 
     useEffect(() => {
+        //console.log("url, and urls: ", url, urls);
+        console.log("Results :", results);
+    }, [results])
+
+    useEffect(() => {
         if (callFetch) {
             const search = async () => {
                 try {
                     const accessToken = import.meta.env.ACCESS_TOKEN;
-                    let apiUrl = { url };
-                    const response = await axios.get(apiUrl, {
+                    const response = await axios.get(url, {
                         headers: {
                             'Authorization': `${accessToken}`,
                         },
@@ -34,13 +38,12 @@ function Issues() {
                         }
                     })
                     setUrls(urls);
-                    console.log('links', urls)
+                    console.log('links', links, urls)
 
 
                     const data = response.data.items;
                     setResults(data);
                     console.log("data items: ", data, "type : ", Array.isArray(data));
-                    // console.log("Link in the header", response.headers.get("link"));
                 } catch (error) {
                     console.error('Error:', error);
                     setResults([]);
@@ -49,7 +52,7 @@ function Issues() {
             }
             search();
         }
-    }, [callFetch]);
+    }, [callFetch, url]);
 
     return (
         <>
@@ -97,10 +100,14 @@ function Issues() {
                 <FontAwesomeIcon icon="fa-solid fa-arrows-rotate" className='px-2' />
                 Refresh</div>
 
-            {urls.map((u) => {
-                <button
-                    onClick={(e) => setUrl(u.url)}
-                >{u.title}</button>
+            {urls?.map((u) => {
+                return (
+                    <button key={u.title}
+                        className='my-10 px-4 py-2 bg-gray-300 rounded-md mx-2 cursor-pointer'
+                        onClick={() => setUrl(u.url)}>
+                        {u.title}
+                    </button>
+                );
             })}
         </>
     )
