@@ -2,22 +2,22 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import React, { useState } from "react";
 import Dropdown from './Dropdown';
 
-function Header() {
+function Header({ }) {
   const [starsSort, setStarsSort] = useState(false);
   const [forksSort, setForksSort] = useState(false);
-  // const options = ['Option 1', 'Javascript', 'Option 3'];
   const options = [
     { label: 'Option 1', subtext: 12 },
     { label: 'Javascript', subtext: 320 },
     { label: 'Option 3' },
-    // Add more options as needed
   ];
 
 
   return (
     <>
       <div className="flex justify-between items-center px-6 h-20 text-white bg-green-700 rounded-t-md">
-        <FontAwesomeIcon icon="fa-brands fa-github-alt" className='text-5xl' />
+        <FontAwesomeIcon icon="fa-brands fa-github-alt"
+          //onClick link to home page
+          className='text-5xl' />
         <h1 className='text-3xl font-semibold'>Github Explore</h1>
         {/* <FontAwesomeIcon icon="fa-solid fa-magnifying-glass" className='text-2xl' /> */}
         <FontAwesomeIcon icon="fa-solid fa-bars-staggered" className='text-2xl' />
@@ -30,7 +30,7 @@ function Header() {
         </div>
         <div className='px-4'>
           <label className='pr-2 text-lg'>Issue Label: </label>
-          <Dropdown options={options} />
+          <Dropdown options={options} defaultSelected={'goodfirstissue'} />
         </div>
         <div className='px-4'>
           <label className='pr-2 text-lg'>Repository: </label>
