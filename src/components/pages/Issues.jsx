@@ -80,7 +80,7 @@ function Issues() {
                                 }
                                 <br></br>
                                 <p>{r.state}</p>
-                                <a href={r.url} className='underline text-blue-600'>Go to issue <sup>↗</sup></a>
+                                <a href={r.html_url} className='underline text-blue-600'>Go to issue <sup>↗</sup></a>
                                 <div className='flex'>
                                     <img src={r.user.avatar_url}
                                         className='h-8 w-8 rounded-full mr-2' />
