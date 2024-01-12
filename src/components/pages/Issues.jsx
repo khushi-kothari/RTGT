@@ -5,10 +5,12 @@ import axios from 'axios';
 import List from '../sub-components/List'
 import { convertTime } from '../sub-components/TimeStamp';
 import { isDark } from '../sub-components/isDark';
+import { doc, writeBatch } from 'firebase/firestore';
 
 
 function Issues() {
-    const [results, setResults] = useState([])
+    const [results, setResults] = useState([]);
+    const [repos, setRepos] = useState([]);
     const [callFetch, setCallFetch] = useState(false);
     const [urls, setUrls] = useState();
     const [url, setUrl] = useState('https://api.github.com/search/issues?q=label:goodfirstissue&sort=updated&order=desc')
@@ -45,6 +47,20 @@ function Issues() {
                     // setCallFetch(true);
 
                     const data = response.data.items;
+                    const reposResult = data.map(async (d) => {
+                        const secondResponse = await fetch(d.repository_url);
+                        const secondData = await secondResponse.json();
+                        return secondData;
+                    });
+
+                    const secondResults = await Promise.all(reposResult);
+                    // setResults((prevResults) => [
+                    //     // ...prevResults,
+                    //     data.map((item, index) => ({
+                    //         item,
+                    //         repos: secondResults[index],
+                    //     })),
+                    // ]);
                     setResults(data);
                     console.log("data items: ", data, "type : ", Array.isArray(data));
                 } catch (error) {
@@ -56,6 +72,44 @@ function Issues() {
             search();
         }
     }, [callFetch, urls]);
+
+    useEffect(() => {
+        console.log('results ', results);
+        // const batch = writeBatch(db);
+        // const addRepos = async () => {
+        //     try {
+        //         results.map((r) => {
+        //             // console.log("single item ", r);
+        //             const id = (r.id).toString();
+        //             const docRef = doc(db, "issues", id);
+        //             const payload = {
+        //                 id: r.id,
+        //                 assignees: r.assignees.length,
+        //                 created_at: r.created_at,
+        //                 updated_at: r.updated_at,
+        //                 html_url: r.html_url,
+        //                 state: r.state,
+        //                 title: r.title,
+        //                 labels: r.labels,
+        //                 repo: {
+
+        //                 },
+        //                 user: {
+        //                     avatar_url: r.user.avatar_url,
+        //                     login: r.user.login
+        //                 }
+        //             }
+        //             // console.log('payload : ', payload);
+        //             batch.set(docRef, payload);
+        //         });
+        //         await batch.commit();
+        //     } catch (err) {
+        //         console.error(err);
+        //     }
+        // }
+        // addRepos();
+
+    }, [results])
 
     return (
         <>
