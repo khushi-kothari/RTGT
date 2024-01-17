@@ -37,7 +37,7 @@ function Fetch() {
     //         try {
     //             results.map((result) => {
     //                 // console.log("single item ", result);
-    //                 const docRef = doc(db, "001", (result.id).toString());
+    //                 const docRef = doc(db, "issues", (result.id).toString());
     //                 const payload = {
     //                     description: result.description,
     //                     forks_count: result.forks_count,

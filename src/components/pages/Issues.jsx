@@ -22,6 +22,18 @@ function Issues() {
         setCallFetch(true);
     }, [url])
 
+    // Recursive function to fetch additional data for each item
+    const fetchAdditionalData = async (item) => {
+        try {
+            const response = await axios.get(item.anotherEndpointUrl); // Replace with your actual endpoint URL
+            const additionalData = response.data;
+            return { ...item, additionalData };
+        } catch (error) {
+            console.error('Error fetching additional data:', error);
+            return item;
+        }
+    };
+
     useEffect(() => {
         if (callFetch) {
             const search = async () => {
@@ -29,87 +41,163 @@ function Issues() {
                     const accessToken = import.meta.env.ACCESS_TOKEN;
                     const response = await axios.get(url, {
                         headers: {
-                            'Authorization': `${accessToken}`,
+                            Authorization: `${accessToken}`,
                         },
                     });
 
-                    const link = response.headers.get("link");
-                    console.log('link : ', link)
-                    const links = link.split(", ");
-                    const urls = links.map(a => {
+                    const link = response.headers.get('link');
+                    const links = link.split(', ');
+                    const urls = links.map((a) => {
                         return {
-                            url: a.split(';')[0].replace(">", "").replace("<", ""),
-                            title: a.split(';')[1].substring(6, a.split(';')[1].length - 1)
-                        }
-                    })
-                    setUrls(urls);
-                    console.log('links', links, urls);
-                    // setCallFetch(true);
-
-                    const data = response.data.items;
-                    const reposResult = data.map(async (d) => {
-                        const secondResponse = await fetch(d.repository_url);
-                        const secondData = await secondResponse.json();
-                        return secondData;
+                            url: a.split(';')[0].replace('>', '').replace('<', ''),
+                            title: a.split(';')[1].substring(6, a.split(';')[1].length - 1),
+                        };
                     });
+                    const data = response.data.items;
 
-                    const secondResults = await Promise.all(reposResult);
-                    // setResults((prevResults) => [
-                    //     // ...prevResults,
-                    //     data.map((item, index) => ({
-                    //         item,
-                    //         repos: secondResults[index],
-                    //     })),
-                    // ]);
-                    setResults(data);
-                    console.log("data items: ", data, "type : ", Array.isArray(data));
+                    // Fetch additional data for each item in the response array in parallel
+                    const updatedData = await Promise.all(data.map(fetchAdditionalData));
+
+                    setResults(updatedData);
+                    console.log('Data items:', updatedData);
                 } catch (error) {
                     console.error('Error:', error);
                     setResults([]);
                 }
                 setCallFetch(false);
-            }
+            };
+
             search();
         }
-    }, [callFetch, urls]);
+    }, [callFetch, url]);
 
     useEffect(() => {
-        console.log('results ', results);
-        // const batch = writeBatch(db);
-        // const addRepos = async () => {
-        //     try {
-        //         results.map((r) => {
-        //             // console.log("single item ", r);
-        //             const id = (r.id).toString();
-        //             const docRef = doc(db, "issues", id);
-        //             const payload = {
-        //                 id: r.id,
-        //                 assignees: r.assignees.length,
-        //                 created_at: r.created_at,
-        //                 updated_at: r.updated_at,
-        //                 html_url: r.html_url,
-        //                 state: r.state,
-        //                 title: r.title,
-        //                 labels: r.labels,
-        //                 repo: {
+        // Assuming you have Firebase Firestore initialized as 'db'
 
-        //                 },
-        //                 user: {
-        //                     avatar_url: r.user.avatar_url,
-        //                     login: r.user.login
-        //                 }
-        //             }
-        //             // console.log('payload : ', payload);
-        //             batch.set(docRef, payload);
-        //         });
-        //         await batch.commit();
-        //     } catch (err) {
-        //         console.error(err);
-        //     }
-        // }
-        // addRepos();
+        const saveDataToFirestore = async () => {
+            const batch = writeBatch(db);
 
-    }, [results])
+            try {
+                //     results.forEach((result) => {
+                //         const docRef = doc(db, 'issues', result.id.toString());
+                //         const payload = {
+                //             description: result.description,
+                //             forks_count: result.forks_count,
+                //             full_name: result.full_name,
+                //             id: result.id,
+                //             owner: {
+                //                 avatar_url: result.owner.avatar_url,
+                //             },
+                //             stargazers_count: result.stargazers_count,
+                //             updated_at: result.updated_at,
+                //             watchers_count: result.watchers_count,
+                //             additionalData: result.additionalData, // Include additional data here
+                //         };
+
+                //         batch.set(docRef, payload);
+                //     });
+
+                //     await batch.commit();
+                console.log('Data saved to Firestore.');
+            } catch (error) {
+                console.error('Error saving data to Firestore:', error);
+            }
+        };
+
+        if (results.length > 0) {
+            saveDataToFirestore();
+        }
+    }, [results]);
+
+    // useEffect(() => {
+    //     if (callFetch) {
+    //         const search = async () => {
+    //             try {
+    //                 const accessToken = import.meta.env.ACCESS_TOKEN;
+    //                 const response = await axios.get(url, {
+    //                     headers: {
+    //                         'Authorization': `${accessToken}`,
+    //                     },
+    //                 });
+
+    //                 const link = response.headers.get("link");
+    //                 console.log('link : ', link)
+    //                 const links = link.split(", ");
+    //                 const urls = links.map(a => {
+    //                     return {
+    //                         url: a.split(';')[0].replace(">", "").replace("<", ""),
+    //                         title: a.split(';')[1].substring(6, a.split(';')[1].length - 1)
+    //                     }
+    //                 })
+    //                 setUrls(urls);
+    //                 console.log('links', links, urls);
+    //                 // setCallFetch(true);
+
+    //                 const data = response.data.items;
+    //                 const reposResult = data.map(async (d) => {
+    //                     const secondResponse = await fetch(d.repository_url);
+    //                     const secondData = await secondResponse.json();
+    //                     return secondData;
+    //                 });
+
+    //                 const secondResults = await Promise.all(reposResult);
+    //                 // setResults((prevResults) => [
+    //                 //     // ...prevResults,
+    //                 //     data.map((item, index) => ({
+    //                 //         item,
+    //                 //         repos: secondResults[index],
+    //                 //     })),
+    //                 // ]);
+    //                 setResults(data);
+    //                 console.log("data items: ", data, "type : ", Array.isArray(data));
+    //             } catch (error) {
+    //                 console.error('Error:', error);
+    //                 setResults([]);
+    //             }
+    //             setCallFetch(false);
+    //         }
+    //         search();
+    //     }
+    // }, [callFetch, urls]);
+
+    // useEffect(() => {
+    //     console.log('results ', results);
+    // const batch = writeBatch(db);
+    // const addRepos = async () => {
+    //     try {
+    //         results.map((r) => {
+    //             // console.log("single item ", r);
+    //             const id = (r.id).toString();
+    //             const docRef = doc(db, "issues", id);
+    //             const payload = {
+    //                 id: r.id,
+    //                 assignees: r.assignees.length,
+    //                 created_at: r.created_at,
+    //                 updated_at: r.updated_at,
+    //                 html_url: r.html_url,
+    //                 state: r.state,
+    //                 title: r.title,
+    //                 labels: r.labels,
+    //                 repo: {
+
+    //                 },
+    //                 user: {
+    //                     avatar_url: r.user.avatar_url,
+    //                     login: r.user.login
+    //                 }
+    //             }
+    //             // console.log('payload : ', payload);
+    //             batch.set(docRef, payload);
+    //         });
+    //         await batch.commit();
+    //     } catch (err) {
+    //         console.error(err);
+    //     }
+    // }
+    // addRepos();
+
+    // }, [results])
+
 
     return (
         <>
