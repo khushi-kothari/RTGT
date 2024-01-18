@@ -6,10 +6,10 @@ import List from '../sub-components/List'
 import { convertTime } from '../sub-components/TimeStamp';
 import { isDark } from '../sub-components/isDark';
 import { doc, writeBatch } from 'firebase/firestore';
-
+import db from '../../firebase.js' //can import default export with any name
 
 function Issues() {
-    const [results, setResults] = useState([]);
+    const [issues, setIssues] = useState([]);
     const [repos, setRepos] = useState([]);
     const [callFetch, setCallFetch] = useState(false);
     const [urls, setUrls] = useState();
@@ -18,16 +18,29 @@ function Issues() {
     useEffect(() => {
         //console.log("url, and urls: ", url, urls);
         console.log('url Changed : "', url, '"');
-        // console.log("Results : ", results)
+        // console.log("Issues : ", issues)
         setCallFetch(true);
     }, [url])
 
     // Recursive function to fetch additional data for each item
     const fetchAdditionalData = async (item) => {
         try {
-            const response = await axios.get(item.anotherEndpointUrl); // Replace with your actual endpoint URL
+            const response = await axios.get(item.repository_url); // Replace with your actual endpoint URL
             const additionalData = response.data;
-            return { ...item, additionalData };
+            const repo = {
+                id: additionalData.id,
+                updated_at: additionalData.updated_at,
+                avatar_url: additionalData.owner.avatar_url,
+                name: additionalData.name,
+                full_name: additionalData.full_name,
+                description: additionalData.description,
+                forks_count: additionalData.forks_count,
+                stargazers_count: additionalData.stargazers_count,
+                watchers_count: additionalData.watchers_count,
+                language: additionalData.language,
+                topics: additionalData.topics
+            }
+            return { ...item, repo };
         } catch (error) {
             console.error('Error fetching additional data:', error);
             return item;
@@ -53,16 +66,17 @@ function Issues() {
                             title: a.split(';')[1].substring(6, a.split(';')[1].length - 1),
                         };
                     });
+                    setUrls(urls);
                     const data = response.data.items;
 
                     // Fetch additional data for each item in the response array in parallel
-                    const updatedData = await Promise.all(data.map(fetchAdditionalData));
+                    const updatedData = await Promise.all(data.map((u) => fetchAdditionalData(u)));
 
-                    setResults(updatedData);
+                    setIssues(updatedData);
                     console.log('Data items:', updatedData);
                 } catch (error) {
                     console.error('Error:', error);
-                    setResults([]);
+                    setIssues([]);
                 }
                 setCallFetch(false);
             };
@@ -78,133 +92,61 @@ function Issues() {
             const batch = writeBatch(db);
 
             try {
-                //     results.forEach((result) => {
-                //         const docRef = doc(db, 'issues', result.id.toString());
-                //         const payload = {
-                //             description: result.description,
-                //             forks_count: result.forks_count,
-                //             full_name: result.full_name,
-                //             id: result.id,
-                //             owner: {
-                //                 avatar_url: result.owner.avatar_url,
-                //             },
-                //             stargazers_count: result.stargazers_count,
-                //             updated_at: result.updated_at,
-                //             watchers_count: result.watchers_count,
-                //             additionalData: result.additionalData, // Include additional data here
-                //         };
+                issues.forEach((issue) => {
+                    const docRef = doc(db, 'issues', issue.id.toString());
+                    const labels = issue.labels.map((label) => ({
+                        color: label.color,
+                        name: label.name,
+                    }));
+                    const payload = {
+                        assignees: issue.assignees.length,
+                        created_at: issue.created_at,
+                        html_url: issue.html_url,
+                        id: issue.id,
+                        labels: labels,
+                        repo: {
+                            id: issue.repo.id,
+                            updated_at: issue.repo.updated_at,
+                            avatar_url: issue.repo.avatar_url,
+                            name: issue.repo.name,
+                            full_name: issue.repo.full_name,
+                            description: issue.repo.description,
+                            forks_count: issue.repo.forks_count,
+                            stargazers_count: issue.repo.stargazers_count,
+                            watchers_count: issue.repo.watchers_count,
+                            language: issue.repo.language,
+                            topics: issue.repo.topics
+                        },
+                        state: issue.state,
+                        title: issue.title,
+                        updated_at: issue.updated_at,
+                        user: {
+                            avatar_url: issue.user.avatar_url,
+                            login: issue.user.login,
+                        },
+                    };
 
-                //         batch.set(docRef, payload);
-                //     });
+                    batch.set(docRef, payload);
+                });
 
-                //     await batch.commit();
+                await batch.commit();
                 console.log('Data saved to Firestore.');
             } catch (error) {
                 console.error('Error saving data to Firestore:', error);
             }
         };
 
-        if (results.length > 0) {
+        if (issues.length > 0) {
             saveDataToFirestore();
         }
-    }, [results]);
-
-    // useEffect(() => {
-    //     if (callFetch) {
-    //         const search = async () => {
-    //             try {
-    //                 const accessToken = import.meta.env.ACCESS_TOKEN;
-    //                 const response = await axios.get(url, {
-    //                     headers: {
-    //                         'Authorization': `${accessToken}`,
-    //                     },
-    //                 });
-
-    //                 const link = response.headers.get("link");
-    //                 console.log('link : ', link)
-    //                 const links = link.split(", ");
-    //                 const urls = links.map(a => {
-    //                     return {
-    //                         url: a.split(';')[0].replace(">", "").replace("<", ""),
-    //                         title: a.split(';')[1].substring(6, a.split(';')[1].length - 1)
-    //                     }
-    //                 })
-    //                 setUrls(urls);
-    //                 console.log('links', links, urls);
-    //                 // setCallFetch(true);
-
-    //                 const data = response.data.items;
-    //                 const reposResult = data.map(async (d) => {
-    //                     const secondResponse = await fetch(d.repository_url);
-    //                     const secondData = await secondResponse.json();
-    //                     return secondData;
-    //                 });
-
-    //                 const secondResults = await Promise.all(reposResult);
-    //                 // setResults((prevResults) => [
-    //                 //     // ...prevResults,
-    //                 //     data.map((item, index) => ({
-    //                 //         item,
-    //                 //         repos: secondResults[index],
-    //                 //     })),
-    //                 // ]);
-    //                 setResults(data);
-    //                 console.log("data items: ", data, "type : ", Array.isArray(data));
-    //             } catch (error) {
-    //                 console.error('Error:', error);
-    //                 setResults([]);
-    //             }
-    //             setCallFetch(false);
-    //         }
-    //         search();
-    //     }
-    // }, [callFetch, urls]);
-
-    // useEffect(() => {
-    //     console.log('results ', results);
-    // const batch = writeBatch(db);
-    // const addRepos = async () => {
-    //     try {
-    //         results.map((r) => {
-    //             // console.log("single item ", r);
-    //             const id = (r.id).toString();
-    //             const docRef = doc(db, "issues", id);
-    //             const payload = {
-    //                 id: r.id,
-    //                 assignees: r.assignees.length,
-    //                 created_at: r.created_at,
-    //                 updated_at: r.updated_at,
-    //                 html_url: r.html_url,
-    //                 state: r.state,
-    //                 title: r.title,
-    //                 labels: r.labels,
-    //                 repo: {
-
-    //                 },
-    //                 user: {
-    //                     avatar_url: r.user.avatar_url,
-    //                     login: r.user.login
-    //                 }
-    //             }
-    //             // console.log('payload : ', payload);
-    //             batch.set(docRef, payload);
-    //         });
-    //         await batch.commit();
-    //     } catch (err) {
-    //         console.error(err);
-    //     }
-    // }
-    // addRepos();
-
-    // }, [results])
-
+    }, [issues]);
 
     return (
         <>
             <div className='m-4'>
                 <Header />
-                {results.length > 0 ?
-                    results.map((r, k) => (
+                {issues.length > 0 ?
+                    issues.map((r, k) => (
                         <React.Fragment key={k}>
                             <div className='my-10 mx-12'>
                                 <h1>{r.title}</h1>
