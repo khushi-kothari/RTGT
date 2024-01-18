@@ -11,8 +11,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route exact path="/" element={<Fetch />} />
-        <Route path="/issue-search" element={<Issues />} />
+        <Route path="/" element={<Issues />} />
+        <Route exact path="/timeline" element={<Fetch />} />
         {/* Other routes */}
       </Routes>
     </Router>
