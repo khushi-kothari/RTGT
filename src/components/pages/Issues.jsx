@@ -5,24 +5,43 @@ import axios from 'axios';
 import List from '../sub-components/List'
 import { convertTime } from '../sub-components/TimeStamp';
 import { isDark } from '../sub-components/isDark';
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch, getDocs, collection, query, orderBy } from 'firebase/firestore';
 import db from '../../firebase.js' //can import default export with any name
 
 function Issues() {
     const [issues, setIssues] = useState([]);
-    const [repos, setRepos] = useState([]);
+    const [fsData, setFsData] = useState([]);
     const [callFetch, setCallFetch] = useState(false);
     const [urls, setUrls] = useState();
     const [url, setUrl] = useState('https://api.github.com/search/issues?q=label:goodfirstissue&sort=updated&order=desc')
 
+    //Get Data from firestore
     useEffect(() => {
-        //console.log("url, and urls: ", url, urls);
+        const getRepoList = async () => {
+            try {
+                const data = await getDocs(query(collection(db, 'issues'), orderBy('updated_at', 'desc')));
+                // const querySnapshot = await usersCollection
+                //     .orderBy('updated_at', 'desc') // Sort by 'updated_at' in descending order
+                //     .get();
+                const sortedData = data.docs.map((doc) => ({
+                    ...doc.data(),
+                }));
+                setFsData(sortedData);
+                console.log('Data from firestore : ', sortedData);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        getRepoList();
+    }, [callFetch]);
+
+    //Set CallFetch to true when page changes
+    useEffect(() => {
         console.log('url Changed : "', url, '"');
-        // console.log("Issues : ", issues)
         setCallFetch(true);
     }, [url])
 
-    // Recursive function to fetch additional data for each item
+    // Recursive function to fetch repo data for each issue
     const fetchAdditionalData = async (item) => {
         try {
             const response = await axios.get(item.repository_url); // Replace with your actual endpoint URL
@@ -47,6 +66,7 @@ function Issues() {
         }
     };
 
+    // All fetch calls and handling of pagination links
     useEffect(() => {
         if (callFetch) {
             const search = async () => {
@@ -85,9 +105,9 @@ function Issues() {
         }
     }, [callFetch, url]);
 
+    //Storing data to firestore
     useEffect(() => {
         // Assuming you have Firebase Firestore initialized as 'db'
-
         const saveDataToFirestore = async () => {
             const batch = writeBatch(db);
 
@@ -145,8 +165,8 @@ function Issues() {
         <>
             <div className='m-4'>
                 <Header />
-                {issues.length > 0 ?
-                    issues.map((r, k) => (
+                {fsData.length > 0 ?
+                    fsData.map((r, k) => (
                         <React.Fragment key={k}>
                             <div className='my-10 mx-12'>
                                 <h1>{r.title}</h1>
@@ -164,7 +184,9 @@ function Issues() {
                                 }
                                 <br></br>
                                 <p>{r.state}</p>
-                                <a href={r.html_url} className='underline text-blue-600'>Go to issue <sup>↗</sup></a>
+                                <a href={r.html_url}
+                                    className='underline text-blue-600'
+                                    target='_blank'>Go to issue <sup>↗</sup></a>
                                 <div className='flex'>
                                     <img src={r.user.avatar_url}
                                         className='h-8 w-8 rounded-full mr-2' />
@@ -203,3 +225,19 @@ function Issues() {
 }
 
 export default Issues
+
+// useEffect(() => {
+//     const getRepoList = async () => {
+//         try {
+//             const data = await getDocs(collection(db, 'issues'));
+//             const filteredData = data.docs.map((doc) => ({
+//                 ...doc.data(),
+//             }));
+//             setFsData(filteredData);
+//             console.log('Data from firestore : ', filteredData);
+//         } catch (err) {
+//             console.error(err);
+//         }
+//     };
+//     getRepoList();
+// }, [callFetch]);
