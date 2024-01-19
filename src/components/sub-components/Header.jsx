@@ -1,15 +1,24 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Dropdown from './Dropdown';
 
-function Header({ }) {
+function Header({ langOptions, labelOptions }) {
   const [starsSort, setStarsSort] = useState(false);
   const [forksSort, setForksSort] = useState(false);
+
+  //3 options and 3 defaults - send via props
   const options = [
     { label: 'Option 1', subtext: 12 },
     { label: 'Javascript', subtext: 320 },
     { label: 'Option 3' },
   ];
+
+  //send to parent, and send a whole query in string to parent (multi-select) search
+  //we can optimise code later. Focus on implementing things rn
+  useEffect(() => {
+    if (starsSort) { }
+    if (forksSort) { }
+  }, [starsSort, forksSort])
 
 
   return (
@@ -26,16 +35,16 @@ function Header({ }) {
         <FontAwesomeIcon icon="fa-solid fa-filter-circle-xmark" className='text-3xl text-white pr-4' />
         <div className='px-4'>
           <label className='pr-2 text-lg'>Language: </label>
-          <Dropdown options={options} defaultSelected={'Javascript'} />
+          <Dropdown options={langOptions} />
         </div>
         <div className='px-4'>
           <label className='pr-2 text-lg'>Issue Label: </label>
-          <Dropdown options={options} defaultSelected={'goodfirstissue'} />
+          <Dropdown options={labelOptions} defaultSelected={'goodfirstissue'} />
         </div>
-        <div className='px-4'>
+        {/* <div className='px-4'>
           <label className='pr-2 text-lg'>Repository: </label>
           <Dropdown options={options} />
-        </div>
+        </div> */}
         <button
           className={`${starsSort ? 'bg-zinc-300 hover:shadow-none' : 'bg-white hover:shadow-xl'} hover:bg-zinc-300 border border-gray-300 rounded py-2 px-4 mx-2 text-gray-700 `}
           onClick={() => {
