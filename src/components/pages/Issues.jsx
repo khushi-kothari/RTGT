@@ -5,7 +5,7 @@ import axios from 'axios';
 import List from '../sub-components/List'
 import { convertTime } from '../sub-components/TimeStamp';
 import { isDark } from '../sub-components/isDark';
-import { doc, writeBatch, getDocs, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, writeBatch, getDocs, collection, query, orderBy, limit, where } from 'firebase/firestore';
 import db from '../../firebase.js' //can import default export with any name
 
 function Issues() {
@@ -13,80 +13,30 @@ function Issues() {
     const [fsData, setFsData] = useState([]);
     const [callFetch, setCallFetch] = useState(false);
     const [urls, setUrls] = useState();
-    const [url, setUrl] = useState('https://api.github.com/search/issues?q=label:goodfirstissue&sort=updated&order=desc')
+    const [url, setUrl] = useState('https://api.github.com/search/issues?q=label:goodfirstissue&sort=updated&order=desc');
     const [language, setLanguage] = useState([]);
     const [labels, setLabels] = useState([]);
+    const [filterQuery, setFilterQuery] = useState({
+        languages: [], // An array for multi-select languages
+        labels: [],    // An array for multi-select labels
+        sortBy: '',
+    });
+    const [filteredData, setFilteredData] = useState();
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(15);
+    const [currentItems, setCurrentItems] = useState([]);
 
+    const handleFilterChange = (key, value) => {
+        setFilterQuery(prevState => ({
+            ...prevState,
+            [key]: value,
+        }));
+        console.log("selected Option from dropdown: ", key, ": ", value);
+    }
 
-    //Get all Data from firestore - also set language and label lists
-    useEffect(() => {
-        const getUniqueLanguagesAndLabelsCount = async () => {
-            try {
-                const snapshot = await getDocs(collection(db, 'issue'), orderBy('timestamp'));
-                const data = snapshot.docs.map((doc) => ({
-                    ...doc.data(),
-                }));
-                setFsData(data);
-                console.log('Firestore sorted Data: ', data);
-
-                const languageCounts = [];
-                const labelCounts = [];
-
-                data.forEach((dataItem) => {
-                    const language = dataItem.repo.language;
-                    if (language) {
-                        // Check if the language is already in languageCounts
-                        const existingLanguage = languageCounts.find((item) => item.label === language);
-
-                        if (existingLanguage) {
-                            existingLanguage.subtext++;
-                        } else {
-                            // If not, add it to languageCounts with a count of 1
-                            languageCounts.push({ label: language, subtext: 1 });
-                        }
-                    }
-
-                    const labels = dataItem.labels;
-
-                    if (labels && labels.length > 0) {
-                        labels.forEach((labelObj) => {
-                            const labelName = labelObj.name;
-
-                            // Check if the label is already in labelCounts
-                            const existingLabel = labelCounts.find((item) => item.label === labelName);
-
-                            if (existingLabel) {
-                                existingLabel.subtext++;
-                            } else {
-                                // If not, add it to labelCounts with a count of 1
-                                labelCounts.push({ label: labelName, subtext: 1 });
-                            }
-                        });
-                    }
-                });
-
-                console.log('Languages and counts: ', languageCounts);
-                console.log('Labels and counts: ', labelCounts);
-
-                setLanguage(languageCounts);
-                setLabels(labelCounts);
-
-                return { languageCounts, labelCounts };
-            } catch (error) {
-                console.error('Error fetching data from Firestore:', error);
-                throw error;
-            }
-        };
-
-        getUniqueLanguagesAndLabelsCount();
-    }, [callFetch]);
-
-
-    //Set CallFetch to true when page changes
-    useEffect(() => {
-        console.log('url Changed : "', url, '"');
-        setCallFetch(true);
-    }, [url])
+    const paginate = (pageNumber) => {
+        setCurrentPage(pageNumber);
+    };
 
     // Recursive function to fetch repo data for each issue
     const fetchAdditionalData = async (item) => {
@@ -113,135 +63,278 @@ function Issues() {
         }
     };
 
+    const fetchApiData = async () => {
+        try {
+            const accessToken = import.meta.env.ACCESS_TOKEN;
+            const response = await axios.get(url, {
+                headers: {
+                    Authorization: `${accessToken}`,
+                },
+            });
+
+            const link = response.headers.get('link');
+            const links = link.split(', ');
+            const urls = links.map((a) => {
+                return {
+                    url: a.split(';')[0].replace('>', '').replace('<', ''),
+                    title: a.split(';')[1].substring(6, a.split(';')[1].length - 1),
+                };
+            });
+            setUrls(urls);
+            const data = response.data.items;
+
+            // Fetch additional data for each item in the response array in parallel
+            const updatedData = await Promise.all(data.map((u) => fetchAdditionalData(u)));
+
+            setIssues(updatedData);
+            console.log('API data:', updatedData);
+        } catch (error) {
+            console.error('Error:', error);
+            setIssues([]);
+        }
+        setCallFetch(false);
+    };
+
+    const saveDataToFirestore = async () => {
+        const batch = writeBatch(db);
+
+        try {
+            issues.forEach((issue) => {
+                const docRef = doc(db, 'issue', issue.id.toString());
+                const labels = issue.labels.map((label) => ({
+                    color: label.color,
+                    name: label.name,
+                }));
+                const timestamp = new Date(issue.updated_at).getTime();
+                const payload = {
+                    assignees: issue.assignees.length,
+                    created_at: issue.created_at,
+                    html_url: issue.html_url,
+                    id: issue.id,
+                    labels: labels,
+                    repo: {
+                        id: issue.repo.id,
+                        updated_at: issue.repo.updated_at,
+                        avatar_url: issue.repo.avatar_url,
+                        name: issue.repo.name,
+                        full_name: issue.repo.full_name,
+                        description: issue.repo.description,
+                        forks_count: issue.repo.forks_count,
+                        stargazers_count: issue.repo.stargazers_count,
+                        watchers_count: issue.repo.watchers_count,
+                        language: issue.repo.language,
+                        topics: issue.repo.topics
+                    },
+                    state: issue.state,
+                    title: issue.title,
+                    updated_at: issue.updated_at,
+                    timestamp: timestamp,
+                    user: {
+                        avatar_url: issue.user.avatar_url,
+                        login: issue.user.login,
+                    },
+                };
+
+                batch.set(docRef, payload);
+            });
+
+            await batch.commit();
+            console.log('Data saved to Firestore.');
+        } catch (error) {
+            console.error('Error saving data to Firestore:', error);
+        }
+    };
+
+    const getLanguagesLabelsFromFirestore = async () => {
+        try {
+            // const snapshot = await getDocs(query(collection(db, 'issue'), where('repo.language', "==", 'Python'), orderBy('timestamp', 'desc'), limit(15)));
+            // const snapshot = await getDocs(query(collection(db, 'issue'), where('repo.topics', 'array-contains', 'goodfirstissue'), orderBy('timestamp', 'desc'), limit(15)));
+            const snapshot = await getDocs(query(collection(db, 'issue'), orderBy('timestamp', 'desc')));
+            const data = snapshot.docs.map((doc) => ({
+                ...doc.data(),
+            }));
+            setFsData(data);
+            console.log('Firestore sorted Data: ', data);
+
+            const languageCounts = [];
+            const labelCounts = [];
+
+            data.forEach((dataItem) => {
+                const language = dataItem.repo.language;
+                if (language) {
+                    // Check if the language is already in languageCounts
+                    const existingLanguage = languageCounts.find((item) => item.label === language);
+
+                    if (existingLanguage) {
+                        existingLanguage.subtext++;
+                    } else {
+                        // If not, add it to languageCounts with a count of 1
+                        languageCounts.push({ label: language, subtext: 1 });
+                    }
+                }
+
+                const labels = dataItem.labels;
+
+                if (labels && labels.length > 0) {
+                    labels.forEach((labelObj) => {
+                        const labelName = labelObj.name;
+
+                        // Check if the label is already in labelCounts
+                        const existingLabel = labelCounts.find((item) => item.label === labelName);
+
+                        if (existingLabel) {
+                            existingLabel.subtext++;
+                        } else {
+                            // If not, add it to labelCounts with a count of 1
+                            labelCounts.push({ label: labelName, subtext: 1 });
+                        }
+                    });
+                }
+            });
+
+            console.log('Languages and counts: ', languageCounts);
+            console.log('Labels and counts: ', labelCounts);
+
+            setLanguage(languageCounts);
+            setLabels(labelCounts);
+
+            return { data, languageCounts, labelCounts };
+        } catch (error) {
+            console.error('Error fetching data from Firestore:', error);
+            throw error;
+        }
+    };
+
+    //Get all Data from firestore - also set language and label lists
+    //Fetching it only once now because of more read requests
+    useEffect(() => {
+        getLanguagesLabelsFromFirestore();
+    }, []);
+
     // All github api fetch calls and handling of pagination links
     useEffect(() => {
         if (callFetch) {
-            const search = async () => {
-                try {
-                    const accessToken = import.meta.env.ACCESS_TOKEN;
-                    const response = await axios.get(url, {
-                        headers: {
-                            Authorization: `${accessToken}`,
-                        },
-                    });
-
-                    const link = response.headers.get('link');
-                    const links = link.split(', ');
-                    const urls = links.map((a) => {
-                        return {
-                            url: a.split(';')[0].replace('>', '').replace('<', ''),
-                            title: a.split(';')[1].substring(6, a.split(';')[1].length - 1),
-                        };
-                    });
-                    setUrls(urls);
-                    const data = response.data.items;
-
-                    // Fetch additional data for each item in the response array in parallel
-                    const updatedData = await Promise.all(data.map((u) => fetchAdditionalData(u)));
-
-                    setIssues(updatedData);
-                    console.log('API data:', updatedData);
-                } catch (error) {
-                    console.error('Error:', error);
-                    setIssues([]);
-                }
-                setCallFetch(false);
-            };
-
-            search();
+            fetchApiData();
         }
-    }, [callFetch, url]);
+    }, [callFetch]);
 
     //Storing data to firestore
     useEffect(() => {
-        // Assuming you have Firebase Firestore initialized as 'db'
-        const saveDataToFirestore = async () => {
-            const batch = writeBatch(db);
-
-            try {
-                issues.forEach((issue) => {
-                    const docRef = doc(db, 'issue', issue.id.toString());
-                    const labels = issue.labels.map((label) => ({
-                        color: label.color,
-                        name: label.name,
-                    }));
-                    const timestamp = new Date(issue.updated_at).getTime();
-                    const payload = {
-                        assignees: issue.assignees.length,
-                        created_at: issue.created_at,
-                        html_url: issue.html_url,
-                        id: issue.id,
-                        labels: labels,
-                        repo: {
-                            id: issue.repo.id,
-                            updated_at: issue.repo.updated_at,
-                            avatar_url: issue.repo.avatar_url,
-                            name: issue.repo.name,
-                            full_name: issue.repo.full_name,
-                            description: issue.repo.description,
-                            forks_count: issue.repo.forks_count,
-                            stargazers_count: issue.repo.stargazers_count,
-                            watchers_count: issue.repo.watchers_count,
-                            language: issue.repo.language,
-                            topics: issue.repo.topics
-                        },
-                        state: issue.state,
-                        title: issue.title,
-                        updated_at: issue.updated_at,
-                        timestamp: timestamp,
-                        user: {
-                            avatar_url: issue.user.avatar_url,
-                            login: issue.user.login,
-                        },
-                    };
-
-                    batch.set(docRef, payload);
-                });
-
-                await batch.commit();
-                console.log('Data saved to Firestore.');
-            } catch (error) {
-                console.error('Error saving data to Firestore:', error);
-            }
-        };
-
         if (issues.length > 0) {
             saveDataToFirestore();
         }
     }, [issues]);
 
+    //Set CallFetch to true when page changes
+    useEffect(() => {
+        console.log('url Changed : "', url, '"');
+        setCallFetch(true);
+    }, [url])
+
+    useEffect(() => {
+        setFilteredData(fsData);
+    }, [fsData])
+
+    // Filters
+    useEffect(() => {
+        let languageFiltered = [];
+        let labelFiltered = [];
+
+        // Apply language filter if necessary
+        if (filterQuery.languages.length > 0) {
+            languageFiltered = fsData.filter(item =>
+                filterQuery.languages.includes(item.repo.language)
+            );
+        }
+
+        // Apply label filter if necessary
+        if (filterQuery.labels.length > 0) {
+            labelFiltered = fsData.filter(item =>
+                item.labels.some(label => filterQuery.labels.includes(label.name))
+            );
+        }
+
+        // Combine filters results (union), remove duplicates
+        let unionFiltered = [...languageFiltered, ...labelFiltered];
+        let uniqueFiltered = Array.from(new Set(unionFiltered.map(item => JSON.stringify(item))))
+            .map(item => JSON.parse(item));
+
+        // Sort by stars or forks if applicable
+        if (filterQuery.sortBy === 'stars') {
+            uniqueFiltered.sort((a, b) => b.repo.stargazers_count - a.repo.stargazers_count);
+        } else if (filterQuery.sortBy === 'forks') {
+            uniqueFiltered.sort((a, b) => b.repo.forks_count - a.repo.forks_count);
+        }
+        setFilteredData(uniqueFiltered);
+        setCurrentPage(1);
+        console.log('filteredResults: ', filteredData, uniqueFiltered);
+    }, [filterQuery]);
+
+    // // Pagination
+    // useEffect(() => {
+
+    // }, [filteredData, currentPage]);
+
+    useEffect(() => {
+        console.log('filteredResults: ', filteredData);
+        // Any other actions that depend on the updated filteredData
+        // Pagination 
+        // const indexOfLastItem = currentPage * itemsPerPage;
+        // const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+        // const newCurrentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+        // setCurrentItems(newCurrentItems);
+    }, [filteredData]);
+
+
     return (
         <>
             <div className='m-4'>
-                <Header langOptions={language} labelOptions={labels} />
-                {fsData.length > 0 ?
-                    fsData.slice(0, 11).map((r, k) => (
+                <Header langOptions={language} labelOptions={labels} onFilterChange={handleFilterChange} />
+                {filteredData?.length > 0 ?
+                    filteredData.slice(0, 15).map((r, k) => (
                         <React.Fragment key={k}>
                             <div className='my-10 mx-12'>
-                                <h1>{r.title}</h1>
-                                <p className=' text-gray-300'>{convertTime(r.updated_at)}</p>
-                                {r.labels.length > 0 &&
-                                    r.labels.map((l, index) => (
-                                        <React.Fragment key={index}>
-                                            {/* backgroundColor : #${l[i].color};  */}
-                                            <button
-                                                style={{ 'backgroundColor': `#${l.color}`, }}
-                                                className={`${isDark(l.color) ? "text-white " : "text-black "}bg-opacity-95 mr-4 p-2 my-2 rounded-md`}
-                                            >{l.name}</button>
-                                        </React.Fragment>
-                                    ))
-                                }
-                                <br></br>
-                                <p>{r.state}</p>
-                                <a href={r.html_url}
-                                    className='underline text-blue-600'
-                                    target='_blank'>Go to issue <sup>↗</sup></a>
-                                <div className='flex'>
-                                    <img src={r.user.avatar_url}
-                                        className='h-8 w-8 rounded-full mr-2' />
-                                    <p>{r.user.login}</p>
+                                <div>
+                                    <h1>{r.title}</h1>
+                                    <p className='text-gray-300'>{convertTime(r.updated_at)}</p>
+                                    <span className=' text-md font-semibold text-gray-600'>Language: </span><button className='p-2 rounded-md bg-gray-100 my-2 text-gray-800'>{r.repo.language}</button>
+                                    <br />
+                                    {r.labels.length > 0 &&
+                                        r.labels.map((l, index) => (
+                                            <React.Fragment key={index}>
+                                                {/* backgroundColor : #${l[i].color};  */}
+                                                <button
+                                                    style={{ 'backgroundColor': `#${l.color}`, }}
+                                                    className={`${isDark(l.color) ? "text-white " : "text-black "}bg-opacity-95 mr-4 p-2 my-2 rounded-md`}
+                                                >{l.name}</button>
+                                            </React.Fragment>
+                                        ))
+                                    }
+                                    <br></br>
+                                    <div className='flex py-3'>
+                                        <img src={r.user.avatar_url}
+                                            className='h-8 w-8 rounded-full mr-2' />
+                                        <p>{r.user.login}</p>
+                                    </div>
+                                    <div className='text-sm text-center flex flex-col md:float-right'>
+                                        <p className='pb-1'>{r.assignees} assignee{r.assignees > 1 ? 's' : ''}</p>
+                                        <p className={`my-2 w-1/3 md:w-full py-2 px-4 ${r.state === 'open' ? 'bg-yellow-400' : 'bg-red-300'} rounded-full`}>{r.state}</p>
+                                        <a href={r.html_url}
+                                            className='underline text-blue-600'
+                                            target='_blank'>Go to issue <sup>↗</sup></a>
+                                    </div>
                                 </div>
-                                <p>{r.assignees} assignee{r.assignees > 1 ? 's' : ''}</p>
+                                <div className='text-sm flex flex-wrap mt-3'>
+                                    <button className='p-3 bg-neutral-100 rounded-lg m-2 ml-0'>
+                                        <FontAwesomeIcon icon="fa-solid fa-code-fork" className='px-2 text-xl' />
+                                        {r.repo.forks_count}</button>
+                                    <button className='p-3 bg-neutral-100 rounded-lg m-2'>
+                                        <FontAwesomeIcon icon="fa-solid fa-star" className='px-2 text-xl' />
+                                        {r.repo.stargazers_count}</button>
+                                    <button className='p-3 bg-neutral-100 rounded-lg m-2'>
+                                        <FontAwesomeIcon icon="fa-solid fa-eye" className='px-2 text-xl' />
+                                        {r.repo.watchers_count}</button>
+                                </div>
                             </div>
                             <hr />
                         </React.Fragment>
@@ -249,7 +342,17 @@ function Issues() {
                     :
                     <>Loading...</>
                 }
-                <div
+
+                {/* // Pagination controls */}
+                {/* {currentItems.length > 0 && (  
+                    <div className="pagination">
+                        {Array(Math.ceil(filteredData.length / itemsPerPage)).fill().map((_, i) => (
+                            <button key={i} onClick={() => paginate(i + 1)}>{i + 1}</button>
+                        ))}
+                    </div>
+                )} */}
+
+                {/* <div
                     onClick={() => {
                         setCallFetch(true)
                     }}
@@ -257,8 +360,8 @@ function Issues() {
                     style={{ pointerEvents: callFetch ? 'none' : 'auto' }}
                 >
                     <FontAwesomeIcon icon="fa-solid fa-arrows-rotate" className='px-2' />
-                    Refresh</div>
-
+                    Refresh
+                </div>
                 {urls?.map((u) => {
                     return (
                         <button key={u.title}
@@ -267,7 +370,7 @@ function Issues() {
                             {u.title}
                         </button>
                     );
-                })}
+                })} */}
             </div>
         </>
     )

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
-const Dropdown = ({ options, defaultSelected }) => {
+const Dropdown = ({ options, defaultSelected, onOptionSelect, label }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedOption, setSelectedOption] = useState(null);
     const dropdownRef = useRef(null);
 
+    // Close Dropdown when clicked outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (isOpen && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -23,6 +24,7 @@ const Dropdown = ({ options, defaultSelected }) => {
         };
     }, [isOpen]);
 
+    // Choose defaultSelected if it exists in the options array
     useEffect(() => {
         if (defaultSelected && options.find((option) => option.label === defaultSelected)) {
             setSelectedOption(defaultSelected);
@@ -36,6 +38,7 @@ const Dropdown = ({ options, defaultSelected }) => {
 
     const selectOption = (option) => {
         setSelectedOption(option.label);
+        onOptionSelect(label, [option.label]);
         setIsOpen(false);
     };
 
