@@ -42,6 +42,10 @@ const Dropdown = ({ options, defaultSelected, onOptionSelect, label }) => {
         setIsOpen(false);
     };
 
+    const truncateLabel = (label) => {
+        return label.length > 15 ? `${label.substring(0, 15)}...` : label;
+    };
+
     return (
         <div ref={dropdownRef} className="relative inline-block text-left font-normal text-gray-700">
             <div className="relative">
@@ -61,8 +65,8 @@ const Dropdown = ({ options, defaultSelected, onOptionSelect, label }) => {
                     <FontAwesomeIcon icon="fa-solid fa-sort" className="text-gray-600" />
                 </button>
                 {isOpen && (
-                    <div className="absolute z-50 mt-1 w-full bg-white rounded shadow-lg">
-                        <ul>
+                    <div className="absolute z-50 mt-1 w-full bg-white rounded shadow-lg overflow-auto">
+                        <ul className='max-h-[60vh]'>
                             {options.map((option) => (
                                 <li
                                     key={option.label}
@@ -70,7 +74,7 @@ const Dropdown = ({ options, defaultSelected, onOptionSelect, label }) => {
                                         }`}
                                     onClick={() => selectOption(option)}
                                 >
-                                    <span>{option.label}</span>
+                                    <span className="truncate">{truncateLabel(option.label)}</span>
                                     {option.subtext && <span className="text-gray-500 text-sm ml-2">({option.subtext})</span>}
                                 </li>
                             ))}

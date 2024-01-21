@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import React, { useState } from "react";
 import Dropdown from './Dropdown';
+import { Link } from 'react-router-dom';
 
 const options = [
   { label: 'Option 1', subtext: 12 },
@@ -17,7 +18,7 @@ function Header({ langOptions = options, labelOptions = options, onFilterChange 
     <>
       {/* Main Header */}
       <div className="flex justify-between items-center px-4 sm:px-6 h-20 text-white bg-green-700 rounded-t-md">
-        <FontAwesomeIcon icon="fa-brands fa-github-alt" className='text-5xl' />
+        <Link to="/"><FontAwesomeIcon icon="fa-brands fa-github-alt" className='text-5xl' /></Link>
         <h1 className='text-xl sm:text-3xl font-semibold'>Github Explore</h1>
         <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="sm:hidden text-2xl">
           <FontAwesomeIcon icon={isMenuOpen ? "fa-solid fa-xmark" : "fa-solid fa-bars-staggered"} />

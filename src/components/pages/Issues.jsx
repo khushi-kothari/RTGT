@@ -275,15 +275,15 @@ function Issues() {
 
     // }, [filteredData, currentPage]);
 
-    useEffect(() => {
-        console.log('filteredResults: ', filteredData);
-        // Any other actions that depend on the updated filteredData
-        // Pagination 
-        // const indexOfLastItem = currentPage * itemsPerPage;
-        // const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-        // const newCurrentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-        // setCurrentItems(newCurrentItems);
-    }, [filteredData]);
+    // useEffect(() => {
+    //     console.log('filteredResults: ', filteredData);
+    //     // Any other actions that depend on the updated filteredData
+    //     // Pagination 
+    //     // const indexOfLastItem = currentPage * itemsPerPage;
+    //     // const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    //     // const newCurrentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+    //     // setCurrentItems(newCurrentItems);
+    // }, [filteredData]);
 
 
     return (
@@ -352,6 +352,7 @@ function Issues() {
                     </div>
                 )} */}
 
+                {/* Fetch new Data */}
                 {/* <div
                     onClick={() => {
                         setCallFetch(true)
