@@ -316,11 +316,11 @@ function Issues() {
                                             className='h-8 w-8 rounded-full mr-2' />
                                         <p>{r.user.login}</p>
                                     </div>
-                                    <div className='text-sm text-center flex flex-col md:float-right'>
-                                        <p className='pb-1'>{r.assignees} assignee{r.assignees > 1 ? 's' : ''}</p>
-                                        <p className={`my-2 w-1/3 md:w-full py-2 px-4 ${r.state === 'open' ? 'bg-yellow-400' : 'bg-red-300'} rounded-full`}>{r.state}</p>
+                                    <div className='text-sm flex flex-col md:float-right'>
+                                        <p className='pb-1 pl-2 md:pl-3'>{r.assignees} assignee{r.assignees > 1 ? 's' : ''}</p>
+                                        <p className={`my-2 w-1/3 text-center md:w-full py-2 px-4 ${r.state === 'open' ? 'bg-yellow-400' : 'bg-red-300'} rounded-full`}>{r.state}</p>
                                         <a href={r.html_url}
-                                            className='underline text-blue-600'
+                                            className='underline text-blue-600 pl-2'
                                             target='_blank'>Go to issue <sup>↗</sup></a>
                                     </div>
                                 </div>

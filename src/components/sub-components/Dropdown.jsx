@@ -44,7 +44,7 @@ const Dropdown = ({ options, defaultSelected, onOptionSelect, label }) => {
 
     return (
         <div ref={dropdownRef} className="relative inline-block text-left font-normal text-gray-700">
-            <div className="w-52 relative">
+            <div className="relative">
                 <input
                     type="text"
                     className="w-full border border-gray-300 rounded py-2 px-4 focus:outline-none focus:border-blue-500"
