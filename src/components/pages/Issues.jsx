@@ -23,7 +23,7 @@ function Issues() {
     });
     const [filteredData, setFilteredData] = useState();
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(15);
+    const [itemsPerPage] = useState(10);
     const [currentItems, setCurrentItems] = useState([]);
 
     const handleFilterChange = (key, value) => {
@@ -37,6 +37,46 @@ function Issues() {
     const paginate = (pageNumber) => {
         setCurrentPage(pageNumber);
     };
+
+    const totalPages = Math.ceil(filteredData?.length / itemsPerPage);
+    let visiblePages = []; // Initialize with no pages.
+
+    // Always show the first page.
+    visiblePages.push(1);
+
+    // Logic to add ellipses and intermediate pages
+    if (totalPages <= 5) {
+        // If there are 5 or fewer total pages, show them all directly.
+        for (let i = 2; i < totalPages; i++) {
+            visiblePages.push(i);
+        }
+    } else {
+        // More complex case: more than 5 total pages.
+        if (currentPage <= 3) {
+            // If on one of the first three pages, show pages up to 4.
+            for (let i = 2; i <= 4; i++) {
+                visiblePages.push(i);
+            }
+            visiblePages.push('...');
+        } else if (currentPage >= totalPages - 2) {
+            // If on one of the last three pages, show ellipsis and the last three pages.
+            visiblePages.push('...');
+            for (let i = totalPages - 3; i < totalPages; i++) {
+                visiblePages.push(i);
+            }
+        } else {
+            // In the middle of the pagination range, show current page surrounded by ellipses.
+            visiblePages.push('...', currentPage - 1, currentPage, currentPage + 1, '...');
+        }
+    }
+
+    // Always show the last page if more than 1 page exists.
+    if (totalPages > 1) {
+        visiblePages.push(totalPages);
+    }
+
+
+
 
     // Recursive function to fetch repo data for each issue
     const fetchAdditionalData = async (item) => {
@@ -270,20 +310,15 @@ function Issues() {
         console.log('filteredResults: ', filteredData, uniqueFiltered);
     }, [filterQuery]);
 
-    // // Pagination
-    // useEffect(() => {
-
-    // }, [filteredData, currentPage]);
-
-    // useEffect(() => {
-    //     console.log('filteredResults: ', filteredData);
-    //     // Any other actions that depend on the updated filteredData
-    //     // Pagination 
-    //     // const indexOfLastItem = currentPage * itemsPerPage;
-    //     // const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    //     // const newCurrentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-    //     // setCurrentItems(newCurrentItems);
-    // }, [filteredData]);
+    useEffect(() => {
+        // console.log('filteredResults: ', filteredData);
+        // Any other actions that depend on the updated filteredData
+        // Pagination 
+        const indexOfLastItem = currentPage * itemsPerPage;
+        const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+        const newCurrentItems = filteredData?.slice(indexOfFirstItem, indexOfLastItem);
+        setCurrentItems(newCurrentItems);
+    }, [filteredData]);
 
 
     return (
@@ -351,6 +386,38 @@ function Issues() {
                         ))}
                     </div>
                 )} */}
+
+                <div className="flex justify-center items-center space-x-2 my-4">
+                    <button
+                        onClick={() => setCurrentPage((prevPage) => Math.max(prevPage - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 disabled:opacity-50"
+                    >
+                        Prev
+                    </button>
+                    {visiblePages.map((page, index) => (
+                        <React.Fragment key={index}>
+                            {page === '...' ? (
+                                <span className="px-4 py-2 bg-gray-200 text-gray-800 rounded">...</span>
+                            ) : (
+                                <button
+                                    className={`px-4 py-2 ${currentPage === page ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'} rounded hover:bg-blue-500 hover:text-white`}
+                                    onClick={() => setCurrentPage(page)}
+                                >
+                                    {page}
+                                </button>
+                            )}
+                        </React.Fragment>
+                    ))}
+                    <button
+                        onClick={() => setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </div>
+
 
                 {/* Fetch new Data */}
                 {/* <div
