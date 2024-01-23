@@ -58,15 +58,17 @@ function Issues() {
                 visiblePages.push(i);
             }
             visiblePages.push('...');
-        } else if (currentPage >= totalPages - 2) {
+        }
+        else if (currentPage >= totalPages - 2) {
             // If on one of the last three pages, show ellipsis and the last three pages.
             visiblePages.push('...');
             for (let i = totalPages - 3; i < totalPages; i++) {
                 visiblePages.push(i);
             }
-        } else {
+        }
+        else {
             // In the middle of the pagination range, show current page surrounded by ellipses.
-            visiblePages.push('...', currentPage - 1, currentPage, currentPage + 1, '...');
+            visiblePages.push('...', currentPage - 1, currentPage, currentPage + 1);
         }
     }
 
@@ -317,16 +319,18 @@ function Issues() {
         const indexOfLastItem = currentPage * itemsPerPage;
         const indexOfFirstItem = indexOfLastItem - itemsPerPage;
         const newCurrentItems = filteredData?.slice(indexOfFirstItem, indexOfLastItem);
-        setCurrentItems(newCurrentItems);
-    }, [filteredData]);
+        if (newCurrentItems)
+            setCurrentItems(newCurrentItems);
+
+    }, [currentPage, fsData, filteredData]);
 
 
     return (
         <>
             <div className='m-4'>
                 <Header langOptions={language} labelOptions={labels} onFilterChange={handleFilterChange} />
-                {filteredData?.length > 0 ?
-                    filteredData.slice(0, 15).map((r, k) => (
+                {currentItems?.length > 0 ?
+                    currentItems.map((r, k) => (
                         <React.Fragment key={k}>
                             <div className='my-10 mx-12'>
                                 <div>
@@ -377,15 +381,6 @@ function Issues() {
                     :
                     <>Loading...</>
                 }
-
-                {/* // Pagination controls */}
-                {/* {currentItems.length > 0 && (  
-                    <div className="pagination">
-                        {Array(Math.ceil(filteredData.length / itemsPerPage)).fill().map((_, i) => (
-                            <button key={i} onClick={() => paginate(i + 1)}>{i + 1}</button>
-                        ))}
-                    </div>
-                )} */}
 
                 <div className="flex justify-center items-center space-x-2 my-4">
                     <button
@@ -458,3 +453,13 @@ export default Issues
 //         console.error(err);
 //     }
 // };
+
+
+{/* // Pagination controls */ }
+{/* {currentItems?.length > 0 && (
+                    <div className="pagination">
+                        {Array(Math.ceil(filteredData.length / itemsPerPage)).fill().map((_, i) => (
+                            <button key={i} onClick={() => paginate(i + 1)}>{i + 1}</button>
+                        ))}
+                    </div>
+                )} */}
