@@ -332,7 +332,7 @@ function Issues() {
                 {currentItems?.length > 0 ?
                     currentItems.map((r, k) => (
                         <React.Fragment key={k}>
-                            <div className='my-10 mx-12'>
+                            <div className='my-10 mx-4 md:mx-12'>
                                 <div>
                                     <h1>{r.title}</h1>
                                     <p className='text-gray-300'>{convertTime(r.updated_at)}</p>
