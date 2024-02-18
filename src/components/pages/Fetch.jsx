@@ -4,6 +4,7 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import db from '../../firebase.js' //can import default export with any name
 import { getDocs, collection, setDoc, doc, writeBatch } from "firebase/firestore";
+import Header from '../sub-components/Header.jsx';
 
 
 function Fetch() {
@@ -36,7 +37,7 @@ function Fetch() {
     //         try {
     //             results.map((result) => {
     //                 // console.log("single item ", result);
-    //                 const docRef = doc(db, "001", (result.id).toString());
+    //                 const docRef = doc(db, "issues", (result.id).toString());
     //                 const payload = {
     //                     description: result.description,
     //                     forks_count: result.forks_count,
@@ -89,22 +90,26 @@ function Fetch() {
 
     return (
         <>
-            {results.length > 0 ?
-                results.slice(0, 5).map((r, k) => (
-                    < List data={r} key={k} />
-                ))
-                :
-                <List />
-            }
-            <div
-                onClick={() => {
-                    setCallFetch(true)
-                }}
-                className={`flex flex-row items-center justify-center bg-neutral-200 hover:bg-neutral-300 my-20 py-3 rounded-md ${callFetch ? 'cursor-default' : 'cursor-pointer'} text-md`}
-                style={{ pointerEvents: callFetch ? 'none' : 'auto' }}
-            >
-                <FontAwesomeIcon icon="fa-solid fa-arrows-rotate" className='px-2' />
-                Refresh</div>
+            <div className='m-4'>
+                <Header />
+
+                {results.length > 0 ?
+                    results.slice(0, 5).map((r, k) => (
+                        < List data={r} key={k} />
+                    ))
+                    :
+                    <List />
+                }
+                <div
+                    onClick={() => {
+                        setCallFetch(true)
+                    }}
+                    className={`flex flex-row items-center justify-center bg-neutral-200 hover:bg-neutral-300 my-20 py-3 rounded-md ${callFetch ? 'cursor-default' : 'cursor-pointer'} text-md`}
+                    style={{ pointerEvents: callFetch ? 'none' : 'auto' }}
+                >
+                    <FontAwesomeIcon icon="fa-solid fa-arrows-rotate" className='px-2' />
+                    Refresh</div>
+            </div>
         </>
     )
 }
